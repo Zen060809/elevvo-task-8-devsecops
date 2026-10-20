@@ -1,8 +1,10 @@
-
 name: DevSecOps Security Checks
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -10,7 +12,7 @@ permissions:
 
 jobs:
   security-checks:
-    name: Terraform and Secret Scanning
+    name: DevSecOps Security Checks
     runs-on: ubuntu-latest
 
     steps:
@@ -20,7 +22,7 @@ jobs:
           fetch-depth: 0
 
       - name: Scan for leaked secrets
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -32,7 +34,7 @@ jobs:
       - name: Install Checkov
         run: pip install checkov
 
-      - name: Scan Terraform configuration
+      - name: Scan Terraform for security misconfigurations
         run: checkov -d terraform/ --framework terraform
 
       - name: Set up Terraform
@@ -41,8 +43,12 @@ jobs:
       - name: Check Terraform formatting
         run: terraform -chdir=terraform fmt -check -recursive
 
-      - name: Initialize Terraform without a backend
+      - name: Initialize Terraform
         run: terraform -chdir=terraform init -backend=false -input=false
 
       - name: Validate Terraform configuration
         run: terraform -chdir=terraform validate
+
+      - name: Generate Terraform plan
+        run: terraform -chdir=terraform plan -refresh=false -input=false -lock=false
+        continue-on-error: false
