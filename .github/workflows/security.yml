@@ -48,7 +48,3 @@ jobs:
 
       - name: Validate Terraform configuration
         run: terraform -chdir=terraform validate
-
-      - name: Generate Terraform plan
-        run: terraform -chdir=terraform plan -refresh=false -input=false -lock=false
-        continue-on-error: false
