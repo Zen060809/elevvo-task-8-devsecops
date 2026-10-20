@@ -1,0 +1,48 @@
+
+name: DevSecOps Security Checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security-checks:
+    name: Terraform and Secret Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan for leaked secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Checkov
+        run: pip install checkov
+
+      - name: Scan Terraform configuration
+        run: checkov -d terraform/ --framework terraform
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Check Terraform formatting
+        run: terraform -chdir=terraform fmt -check -recursive
+
+      - name: Initialize Terraform without a backend
+        run: terraform -chdir=terraform init -backend=false -input=false
+
+      - name: Validate Terraform configuration
+        run: terraform -chdir=terraform validate
